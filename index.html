@@ -1,0 +1,665 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escape de Lanús - Luis Espert</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(180deg, #87CEEB 0%, #E0E0E0 50%);
+            font-family: 'Arial Black', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: linear-gradient(180deg, #87CEEB 0%, #90EE90 30%, #808080 100%);
+            border: 3px solid #333;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(180deg, #87CEEB 0%, #90EE90 30%, #696969 100%);
+        }
+
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+
+        #startScreen, #gameOverScreen, #winScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 100;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 20px;
+            font-weight: bold;
+            background: #FF6B35;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #FF8C42;
+            transform: scale(1.05);
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+
+        .instructions {
+            font-size: 16px;
+            margin: 20px;
+            max-width: 600px;
+            line-height: 1.5;
+        }
+
+        #helicopter {
+            position: absolute;
+            font-size: 48px;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div id="ui">
+            <div>Tiempo: <span id="timer">60</span>s</div>
+            <div>Vidas: <span id="lives">3</span></div>
+            <div>Puntaje: <span id="score">0</span></div>
+        </div>
+
+        <div id="startScreen">
+            <h1>🏃‍♂️ ESCAPE DE LANÚS 🏍️</h1>
+            <div class="instructions">
+                <p><strong>Luis Espert debe escapar de Lanús en 60 segundos!</strong></p>
+                <p>🏍️ Usa las flechas ←→ para moverte en la carretera</p>
+                <p>🥬 Esquiva las verduras que te tiran los vecinos desde las veredas</p>
+                <p>🚁 Si sobrevives 60 segundos, ¡te espera un helicóptero!</p>
+                <p>💀 Tienes 3 vidas. ¡No te rindas!</p>
+            </div>
+            <button onclick="startGame()">¡COMENZAR ESCAPE!</button>
+        </div>
+
+        <div id="gameOverScreen" class="hidden">
+            <h1>💥 ¡ATRAPADO EN LANÚS! 💥</h1>
+            <p>Las verduras te alcanzaron...</p>
+            <p>Puntaje final: <span id="finalScore">0</span></p>
+            <button onclick="restartGame()">Intentar de nuevo</button>
+        </div>
+
+        <div id="winScreen" class="hidden">
+            <h1>🎉 ¡ESCAPASTE DE LANÚS! 🚁</h1>
+            <p>¡Luis Espert logró subir al helicóptero!</p>
+            <p>Puntaje final: <span id="winScore">0</span></p>
+            <div id="helicopter">🚁</div>
+            <button onclick="restartGame()">Jugar de nuevo</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let gameState = 'start'; // start, playing, gameOver, win
+        let timeLeft = 60;
+        let lives = 3;
+        let score = 0;
+        let gameSpeed = 2;
+        
+        // Posición del protagonista (Luis Espert en la moto)
+        let player = {
+            x: canvas.width / 2,
+            y: canvas.height - 150,
+            width: 50,
+            height: 80,
+            dx: 0
+        };
+        
+        // Arrays para objetos del juego
+        let vegetables = [];
+        let roadLines = [];
+        let buildings = [];
+        let clouds = [];
+        
+        // Controles
+        let keys = {};
+        
+        // Inicializar elementos del fondo
+        function initBackground() {
+            // Líneas de carretera (horizontales para vista desde atrás)
+            for (let i = 0; i < 15; i++) {
+                roadLines.push({
+                    x: canvas.width / 2 - 100,
+                    y: i * 50,
+                    width: 200
+                });
+            }
+            
+            // Edificios a los costados
+            for (let i = 0; i < 20; i++) {
+                // Edificios lado izquierdo
+                buildings.push({
+                    x: Math.random() * 200,
+                    y: i * 40,
+                    width: 80,
+                    height: 60,
+                    side: 'left',
+                    color: `hsl(${Math.random() * 60 + 200}, 30%, ${Math.random() * 20 + 40}%)`
+                });
+                
+                // Edificios lado derecho
+                buildings.push({
+                    x: canvas.width - 200 + Math.random() * 120,
+                    y: i * 40,
+                    width: 80,
+                    height: 60,
+                    side: 'right',
+                    color: `hsl(${Math.random() * 60 + 200}, 30%, ${Math.random() * 20 + 40}%)`
+                });
+            }
+            
+            // Nubes
+            for (let i = 0; i < 12; i++) {
+                clouds.push({
+                    x: Math.random() * canvas.width,
+                    y: i * 80,
+                    size: Math.random() * 30 + 20
+                });
+            }
+        }
+        
+        // Dibujar el fondo
+        function drawBackground() {
+            // Cielo y carretera con perspectiva
+            let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(0.7, '#90EE90');
+            gradient.addColorStop(1, '#696969');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Nubes
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            clouds.forEach(cloud => {
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.size, cloud.y, cloud.size * 0.8, 0, Math.PI * 2);
+                ctx.arc(cloud.x - cloud.size * 0.5, cloud.y, cloud.size * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Edificios a los costados
+            buildings.forEach(building => {
+                ctx.fillStyle = building.color;
+                ctx.fillRect(building.x, building.y, building.width, building.height);
+                
+                // Ventanas
+                ctx.fillStyle = 'yellow';
+                for (let i = 0; i < 3; i++) {
+                    for (let j = 0; j < 2; j++) {
+                        if (Math.random() > 0.5) {
+                            ctx.fillRect(building.x + i * 20 + 10, building.y + j * 25 + 10, 12, 15);
+                        }
+                    }
+                }
+            });
+            
+            // Carretera central con perspectiva
+            ctx.fillStyle = '#404040';
+            // Carretera que se estrecha hacia arriba (perspectiva)
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 - 200, canvas.height);
+            ctx.lineTo(canvas.width / 2 - 100, 0);
+            ctx.lineTo(canvas.width / 2 + 100, 0);
+            ctx.lineTo(canvas.width / 2 + 200, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Veredas a los costados
+            ctx.fillStyle = '#D3D3D3';
+            // Vereda izquierda
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 - 220, canvas.height);
+            ctx.lineTo(canvas.width / 2 - 120, 0);
+            ctx.lineTo(canvas.width / 2 - 100, 0);
+            ctx.lineTo(canvas.width / 2 - 200, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Vereda derecha
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 + 200, canvas.height);
+            ctx.lineTo(canvas.width / 2 + 100, 0);
+            ctx.lineTo(canvas.width / 2 + 120, 0);
+            ctx.lineTo(canvas.width / 2 + 220, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Líneas centrales de la carretera (se mueven hacia abajo)
+            ctx.fillStyle = 'white';
+            roadLines.forEach(line => {
+                ctx.fillRect(line.x, line.y, line.width, 4);
+            });
+        }
+        
+        // Dibujar al protagonista (Luis Espert en moto) - Vista desde atrás
+        function drawPlayer() {
+            // Moto - carrocería principal vista desde atrás
+            ctx.fillStyle = '#1e40af';
+            ctx.fillRect(player.x - 20, player.y + 25, 40, 35);
+            
+            // Asiento de la moto
+            ctx.fillStyle = '#000';
+            ctx.fillRect(player.x - 17, player.y + 15, 34, 15);
+            
+            // Ruedas traseras (vista desde atrás)
+            ctx.fillStyle = '#2C2C2C';
+            ctx.fillRect(player.x - 25, player.y + 50, 12, 20);
+            ctx.fillRect(player.x + 13, player.y + 50, 12, 20);
+            
+            // Llantas
+            ctx.fillStyle = '#C0C0C0';
+            ctx.fillRect(player.x - 23, player.y + 52, 8, 16);
+            ctx.fillRect(player.x + 15, player.y + 52, 8, 16);
+            
+            // Conductor (chofer) - adelante, vista desde atrás
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(player.x - 6, player.y - 5, 12, 25);
+            
+            // Cabeza del conductor
+            ctx.fillStyle = '#FFE4C4';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y - 10, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Casco del conductor
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y - 12, 8, Math.PI, Math.PI * 2);
+            ctx.fill();
+            
+            // Luis Espert (pasajero trasero) - atrás del conductor
+            // Espalda con traje
+            ctx.fillStyle = '#2C3E50';
+            ctx.fillRect(player.x - 8, player.y + 10, 16, 25);
+            
+            // Cabeza pelada vista desde atrás (más atrás que el conductor)
+            ctx.fillStyle = '#FFE4C4';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y + 5, 10, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Reflejo característico en la cabeza pelada
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.beginPath();
+            ctx.arc(player.x - 2, player.y + 2, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Cuello de la camisa
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(player.x - 4, player.y + 15, 8, 4);
+            
+            // Parte trasera de la corbata
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(player.x - 2, player.y + 19, 4, 12);
+            
+            // Brazos agarrando al conductor (vista desde atrás)
+            ctx.fillStyle = '#2C3E50';
+            // Brazo izquierdo
+            ctx.fillRect(player.x - 12, player.y + 12, 8, 6);
+            // Brazo derecho
+            ctx.fillRect(player.x + 4, player.y + 12, 8, 6);
+            
+            // Manos en los hombros del conductor
+            ctx.fillStyle = '#FFE4C4';
+            ctx.beginPath();
+            ctx.arc(player.x - 8, player.y + 8, 3, 0, Math.PI * 2);
+            ctx.arc(player.x + 8, player.y + 8, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Sombra bajo la moto
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(player.x - 23, player.y + 72, 46, 8);
+        }
+        
+        // Crear vegetales (ahora vienen desde arriba)
+        function createVegetable() {
+            if (Math.random() < 0.02 + (90 - timeLeft) * 0.001) {
+                const vegetables_types = ['🥬', '🥕', '🧅', '🍅', '🥔', '🌶️', '🥒'];
+                vegetables.push({
+                    x: Math.random() * 400 + canvas.width / 2 - 200, // En la carretera
+                    y: -30,
+                    dx: Math.random() * 2 - 1,
+                    dy: gameSpeed + Math.random() * 3 + 2,
+                    type: vegetables_types[Math.floor(Math.random() * vegetables_types.length)],
+                    rotation: 0,
+                    size: 20 + Math.random() * 10
+                });
+            }
+        }
+        
+        // Dibujar vegetales
+        function drawVegetables() {
+            vegetables.forEach(veg => {
+                ctx.save();
+                ctx.translate(veg.x, veg.y);
+                ctx.rotate(veg.rotation);
+                ctx.font = `${veg.size}px Arial`;
+                ctx.fillText(veg.type, -veg.size/2, veg.size/2);
+                ctx.restore();
+                
+                // Sombra
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.fillText(veg.type, veg.x + 2, veg.y + 2);
+            });
+        }
+        
+        // Actualizar vegetales
+        function updateVegetables() {
+            vegetables.forEach((veg, index) => {
+                veg.x += veg.dx;
+                veg.y += veg.dy;
+                veg.rotation += 0.1;
+                
+                // Remover vegetales que salen de pantalla (abajo)
+                if (veg.y > canvas.height + 50) {
+                    vegetables.splice(index, 1);
+                    score += 10; // Puntos por esquivar
+                }
+            });
+        }
+        
+        // Detectar colisiones
+        function checkCollisions() {
+            vegetables.forEach((veg, index) => {
+                if (veg.x < player.x + player.width &&
+                    veg.x + 20 > player.x &&
+                    veg.y < player.y + player.height &&
+                    veg.y + 20 > player.y) {
+                    
+                    // Colisión detectada
+                    vegetables.splice(index, 1);
+                    lives--;
+                    
+                    // Efecto de daño
+                    player.y += Math.random() * 10 - 5;
+                    
+                    if (lives <= 0) {
+                        gameState = 'gameOver';
+                    }
+                }
+            });
+        }
+        
+        // Actualizar elementos del fondo
+        function updateBackground() {
+            // Mover líneas de carretera hacia abajo
+            roadLines.forEach(line => {
+                line.y += gameSpeed;
+                if (line.y > canvas.height) {
+                    line.y = -50;
+                }
+            });
+            
+            // Mover edificios hacia abajo
+            buildings.forEach(building => {
+                building.y += gameSpeed * 0.8;
+                if (building.y > canvas.height) {
+                    building.y = -building.height;
+                }
+            });
+            
+            // Mover nubes hacia abajo
+            clouds.forEach(cloud => {
+                cloud.y += gameSpeed * 0.3;
+                if (cloud.y > canvas.height + cloud.size) {
+                    cloud.y = -cloud.size * 2;
+                    cloud.x = Math.random() * canvas.width;
+                }
+            });
+        }
+        
+        // Actualizar jugador
+        function updatePlayer() {
+            // Movimiento horizontal (izquierda/derecha)
+            if (keys['ArrowLeft'] && player.x > canvas.width / 2 - 180) {
+                player.dx = -4;
+            } else if (keys['ArrowRight'] && player.x < canvas.width / 2 + 180) {
+                player.dx = 4;
+            } else {
+                player.dx *= 0.8; // Fricción
+            }
+            
+            player.x += player.dx;
+            
+            // Límites de la carretera
+            if (player.x < canvas.width / 2 - 180) player.x = canvas.width / 2 - 180;
+            if (player.x > canvas.width / 2 + 180) player.x = canvas.width / 2 + 180;
+        }
+        
+        // Dibujar vecinos tirando verduras (en las veredas laterales)
+        function drawNeighbors() {
+            // Vecinos en vereda izquierda
+            for (let i = 0; i < 3; i++) {
+                let x = 50 + i * 80;
+                let y = 100 + i * 150 + (Date.now() * 0.01) % 600;
+                
+                if (y < canvas.height && y > -50) {
+                    // Vecino
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(x, y, 15, 30);
+                    
+                    // Cabeza
+                    ctx.fillStyle = '#FFE4C4';
+                    ctx.beginPath();
+                    ctx.arc(x + 7, y - 10, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Brazo tirando hacia la carretera
+                    ctx.strokeStyle = '#8B4513';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(x + 15, y + 10);
+                    ctx.lineTo(x + 30, y + 5);
+                    ctx.stroke();
+                }
+            }
+            
+            // Vecinos en vereda derecha
+            for (let i = 0; i < 3; i++) {
+                let x = canvas.width - 100 + i * 80;
+                let y = 150 + i * 120 + (Date.now() * 0.01) % 600;
+                
+                if (y < canvas.height && y > -50) {
+                    // Vecino
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(x, y, 15, 30);
+                    
+                    // Cabeza
+                    ctx.fillStyle = '#FFE4C4';
+                    ctx.beginPath();
+                    ctx.arc(x + 7, y - 10, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Brazo tirando hacia la carretera
+                    ctx.strokeStyle = '#8B4513';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y + 10);
+                    ctx.lineTo(x - 15, y + 5);
+                    ctx.stroke();
+                }
+            }
+        }
+        
+        // Loop principal del juego
+        function gameLoop() {
+            if (gameState === 'playing') {
+                // Limpiar canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Actualizar
+                updateBackground();
+                updatePlayer();
+                createVegetable();
+                updateVegetables();
+                checkCollisions();
+                
+                // Dibujar
+                drawBackground();
+                drawNeighbors();
+                drawPlayer();
+                drawVegetables();
+                
+                // Aumentar velocidad gradualmente
+                gameSpeed = Math.min(2 + (90 - timeLeft) * 0.05, 6);
+                
+                // Actualizar UI
+                document.getElementById('timer').textContent = timeLeft;
+                document.getElementById('lives').textContent = lives;
+                document.getElementById('score').textContent = score;
+                
+                // Verificar victoria
+                if (timeLeft <= 0) {
+                    gameState = 'win';
+                }
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Timer del juego
+        setInterval(() => {
+            if (gameState === 'playing' && timeLeft > 0) {
+                timeLeft--;
+            }
+        }, 1000);
+        
+        // Controles
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+        
+        // Funciones de control del juego
+        function startGame() {
+            gameState = 'playing';
+            timeLeft = 90;
+            lives = 3;
+            score = 0;
+            vegetables = [];
+            player.x = canvas.width / 2;
+            gameSpeed = 2;
+            
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('winScreen').classList.add('hidden');
+        }
+        
+        function restartGame() {
+            gameState = 'start';
+            document.getElementById('startScreen').classList.remove('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('winScreen').classList.add('hidden');
+        }
+        
+        // Observar cambios de estado del juego
+        setInterval(() => {
+            if (gameState === 'gameOver') {
+                document.getElementById('finalScore').textContent = score;
+                document.getElementById('gameOverScreen').classList.remove('hidden');
+            } else if (gameState === 'win') {
+                document.getElementById('winScore').textContent = score;
+                document.getElementById('winScreen').classList.remove('hidden');
+                
+                // Animar helicóptero
+                const helicopter = document.getElementById('helicopter');
+                let helicopterY = 100;
+                setInterval(() => {
+                    helicopterY += Math.sin(Date.now() * 0.005) * 2;
+                    helicopter.style.top = helicopterY + 'px';
+                    helicopter.style.left = (Math.sin(Date.now() * 0.003) * 20 + 350) + 'px';
+                }, 50);
+            }
+        }, 100);
+        
+        // Inicializar juego
+        initBackground();
+        gameLoop();
+        
+        // Agregar sonidos con beep simple
+        function playSound(frequency, duration) {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = 'square';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+        
+        // Efectos de sonido en colisiones
+        let originalCheckCollisions = checkCollisions;
+        checkCollisions = function() {
+            let oldLives = lives;
+            originalCheckCollisions();
+            if (lives < oldLives) {
+                playSound(200, 0.3); // Sonido de daño
+            }
+        };
+    </script>
+</body>
+</html>
