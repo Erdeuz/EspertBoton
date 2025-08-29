@@ -171,7 +171,7 @@
         
         <div id="ui">
             <div>Tiempo: <span id="timer">90</span>s</div>
-            <div>Vidas: <span id="lives">3</span></div>
+            <div>Vidas: <span id="lives">10</span></div>
             <div>Puntaje: <span id="score">0</span></div>
         </div>
 
@@ -234,7 +234,7 @@
         
         let gameState = 'start';
         let timeLeft = 90;
-        let lives = 3;
+        let lives = 10;
         let score = 0;
         let gameSpeed = 2;
         
@@ -699,7 +699,7 @@
         function startGame() {
             gameState = 'playing';
             timeLeft = 90;
-            lives = 3;
+            lives = 10;
             score = 0;
             vegetables = [];
             player.x = canvas.width / 2;
