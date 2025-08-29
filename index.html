@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Escape de LOMAS - Luis Espert</title>
+    <title>Escape de Lanús - Luis Espert</title>
     <style>
         * {
             margin: 0;
@@ -182,9 +182,9 @@
         </div>
 
         <div id="startScreen">
-            <h1>🏃‍♂️ ESCAPE DE LOMAS 🏍️</h1>
+            <h1>🏃‍♂️ ESCAPE DE LANÚS 🏍️</h1>
             <div class="instructions">
-                <p><strong>Luis Espert debe escapar de LOMAS en 60 segundos!</strong></p>
+                <p><strong>Luis Espert debe escapar de Lanús en 90 segundos!</strong></p>
                 <p>🏍️ Usa las flechas o toca los botones para moverte</p>
                 <p>🥬 Esquiva las verduras de los vecinos</p>
                 <p>🚁 Si sobrevives, ¡te espera un helicóptero!</p>
@@ -194,14 +194,14 @@
         </div>
 
         <div id="gameOverScreen" class="hidden">
-            <h1>💥 ¡ATRAPADO EN LOMAS! 💥</h1>
+            <h1>💥 ¡ATRAPADO EN LANÚS! 💥</h1>
             <p>Las verduras te alcanzaron...</p>
             <p>Puntaje final: <span id="finalScore">0</span></p>
             <button onclick="restartGame()">Intentar de nuevo</button>
         </div>
 
         <div id="winScreen" class="hidden">
-            <h1>🎉 ¡ESCAPASTE DE LOMAS! 🚁</h1>
+            <h1>🎉 ¡ESCAPASTE DE LANÚS! 🚁</h1>
             <p>¡Luis Espert logró subir al helicóptero!</p>
             <p>Puntaje final: <span id="winScore">0</span></p>
             <div id="helicopter">🚁</div>
@@ -233,7 +233,7 @@
         window.addEventListener('resize', resizeCanvas);
         
         let gameState = 'start';
-        let timeLeft = 60;
+        let timeLeft = 90;
         let lives = 3;
         let score = 0;
         let gameSpeed = 2;
@@ -496,7 +496,7 @@
         
         // Crear vegetales
         function createVegetable() {
-            if (Math.random() < 0.02 + (60 - timeLeft) * 0.001) {
+            if (Math.random() < 0.02 + (90 - timeLeft) * 0.001) {
                 const vegetables_types = ['🥬', '🥕', '🧅', '🍅', '🥔', '🌶️', '🥒'];
                 vegetables.push({
                     x: Math.random() * 400 + canvas.width / 2 - 200,
@@ -664,7 +664,7 @@
                 drawPlayer();
                 drawVegetables();
                 
-                gameSpeed = Math.min(2 + (60 - timeLeft) * 0.05, 6);
+                gameSpeed = Math.min(2 + (90 - timeLeft) * 0.05, 6);
                 
                 document.getElementById('timer').textContent = timeLeft;
                 document.getElementById('lives').textContent = lives;
