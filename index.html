@@ -2,12 +2,16 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Escape de Lomas - Luis Espert</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Escape de Lanús - Luis Espert</title>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
             background: linear-gradient(180deg, #87CEEB 0%, #E0E0E0 50%);
             font-family: 'Arial Black', Arial, sans-serif;
             display: flex;
@@ -15,35 +19,75 @@
             align-items: center;
             min-height: 100vh;
             overflow: hidden;
+            touch-action: none;
         }
+
         #gameContainer {
             position: relative;
-            width: 800px;
-            height: 600px;
+            width: 100vw;
+            height: 100vh;
+            max-width: 800px;
+            max-height: 600px;
             background: linear-gradient(180deg, #87CEEB 0%, #90EE90 30%, #808080 100%);
-            border: 3px solid #333;
+            border: 2px solid #333;
             overflow: hidden;
         }
+
         #gameCanvas {
             display: block;
+            width: 100%;
+            height: 100%;
             background: linear-gradient(180deg, #87CEEB 0%, #90EE90 30%, #696969 100%);
         }
+
         #ui {
             position: absolute;
             top: 10px;
             left: 10px;
             color: white;
-            font-size: 18px;
+            font-size: clamp(14px, 3vw, 18px);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             z-index: 10;
         }
+
+        #mobileControls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 15;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.8);
+            border: 3px solid #333;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            user-select: none;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .control-btn:active {
+            transform: scale(0.9);
+            background: rgba(255, 255, 255, 0.6);
+        }
+
         #startScreen, #gameOverScreen, #winScreen {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.9);
             color: white;
             display: flex;
             flex-direction: column;
@@ -51,13 +95,16 @@
             align-items: center;
             text-align: center;
             z-index: 100;
+            padding: 20px;
         }
+
         .hidden {
             display: none !important;
         }
+
         button {
-            padding: 15px 30px;
-            font-size: 20px;
+            padding: 12px 24px;
+            font-size: clamp(16px, 4vw, 20px);
             font-weight: bold;
             background: #FF6B35;
             color: white;
@@ -66,26 +113,55 @@
             cursor: pointer;
             margin: 10px;
             transition: all 0.3s;
+            touch-action: manipulation;
         }
-        button:hover {
+
+        button:hover, button:active {
             background: #FF8C42;
             transform: scale(1.05);
         }
+
         h1 {
-            font-size: 36px;
+            font-size: clamp(24px, 6vw, 36px);
             margin-bottom: 20px;
             text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
         }
+
         .instructions {
-            font-size: 16px;
+            font-size: clamp(12px, 3vw, 16px);
             margin: 20px;
-            max-width: 600px;
+            max-width: 90%;
             line-height: 1.5;
         }
+
         #helicopter {
             position: absolute;
-            font-size: 48px;
+            font-size: clamp(32px, 8vw, 48px);
             z-index: 50;
+        }
+
+        /* Ocultar controles móviles en pantallas grandes */
+        @media (min-width: 768px) {
+            #mobileControls {
+                display: none;
+            }
+        }
+
+        /* Optimización para pantallas muy pequeñas */
+        @media (max-width: 480px) {
+            #gameContainer {
+                border: 1px solid #333;
+            }
+            
+            .control-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+            
+            #ui {
+                font-size: 14px;
+            }
         }
     </style>
 </head>
@@ -94,32 +170,38 @@
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         
         <div id="ui">
-            <div>Tiempo: <span id="timer">60</span>s</div>
-            <div>Vidas: <span id="lives">5</span></div>
+            <div>Tiempo: <span id="timer">90</span>s</div>
+            <div>Vidas: <span id="lives">3</span></div>
             <div>Puntaje: <span id="score">0</span></div>
         </div>
 
+        <!-- Controles móviles -->
+        <div id="mobileControls">
+            <div class="control-btn" id="leftBtn">←</div>
+            <div class="control-btn" id="rightBtn">→</div>
+        </div>
+
         <div id="startScreen">
-            <h1>🏃‍♂️ ESCAPE DE LOMAS 🏍️</h1>
+            <h1>🏃‍♂️ ESCAPE DE LANÚS 🏍️</h1>
             <div class="instructions">
-                <p><strong>Luis Espert debe escapar de Lomas en 60 segundos!</strong></p>
-                <p>🏍️ Usa las flechas ←→ para moverte en la carretera</p>
-                <p>🥬 Esquiva las verduras que te tiran los vecinos desde las veredas</p>
-                <p>🚁 Si sobrevives 60 segundos, ¡te espera un helicóptero!</p>
-                <p>💀 Tienes 5 vidas. ¡No te rindas!</p>
+                <p><strong>Luis Espert debe escapar de Lanús en 90 segundos!</strong></p>
+                <p>🏍️ Usa las flechas o toca los botones para moverte</p>
+                <p>🥬 Esquiva las verduras de los vecinos</p>
+                <p>🚁 Si sobrevives, ¡te espera un helicóptero!</p>
+                <p>💀 Tienes 3 vidas. ¡No te rindas!</p>
             </div>
             <button onclick="startGame()">¡COMENZAR ESCAPE!</button>
         </div>
 
         <div id="gameOverScreen" class="hidden">
-            <h1>💥 ¡ATRAPADO EN LOMAS! 💥</h1>
+            <h1>💥 ¡ATRAPADO EN LANÚS! 💥</h1>
             <p>Las verduras te alcanzaron...</p>
             <p>Puntaje final: <span id="finalScore">0</span></p>
             <button onclick="restartGame()">Intentar de nuevo</button>
         </div>
 
         <div id="winScreen" class="hidden">
-            <h1>🎉 ¡ESCAPASTE DE LOMAS! 🚁</h1>
+            <h1>🎉 ¡ESCAPASTE DE LANÚS! 🚁</h1>
             <p>¡Luis Espert logró subir al helicóptero!</p>
             <p>Puntaje final: <span id="winScore">0</span></p>
             <div id="helicopter">🚁</div>
@@ -128,16 +210,35 @@
     </div>
 
     <script>
-        // Variables globales del juego
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
+        // Configurar canvas responsivo
+        function resizeCanvas() {
+            const container = document.getElementById('gameContainer');
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            
+            canvas.style.width = containerWidth + 'px';
+            canvas.style.height = containerHeight + 'px';
+            
+            // Mantener proporción 4:3
+            const scale = Math.min(containerWidth / 800, containerHeight / 600);
+            canvas.width = 800;
+            canvas.height = 600;
+        }
+        
+        // Ajustar canvas al cargar y al cambiar tamaño
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
         let gameState = 'start';
-        let timeLeft = 60;
-        let lives = 5; // ¡CAMBIADO A 5 VIDAS!
+        let timeLeft = 90;
+        let lives = 3;
         let score = 0;
         let gameSpeed = 2;
         
+        // Posición del protagonista
         let player = {
             x: canvas.width / 2,
             y: canvas.height - 150,
@@ -146,39 +247,77 @@
             dx: 0
         };
         
+        // Arrays para objetos del juego
         let vegetables = [];
         let roadLines = [];
         let buildings = [];
         let clouds = [];
+        
+        // Controles (teclado + táctil)
         let keys = {};
-
-        // FUNCIONES GLOBALES - DEFINIDAS ANTES DE SER LLAMADAS
-        function startGame() {
-            console.log("¡Iniciando juego con 5 vidas!");
-            gameState = 'playing';
-            timeLeft = 90;
-            lives = 5; // ¡5 VIDAS!
-            score = 0;
-            vegetables = [];
-            player.x = canvas.width / 2;
-            gameSpeed = 2;
+        let mobileControls = {
+            left: false,
+            right: false
+        };
+        
+        // Configurar controles táctiles
+        function setupMobileControls() {
+            const leftBtn = document.getElementById('leftBtn');
+            const rightBtn = document.getElementById('rightBtn');
             
-            document.getElementById('startScreen').classList.add('hidden');
-            document.getElementById('gameOverScreen').classList.add('hidden');
-            document.getElementById('winScreen').classList.add('hidden');
+            // Botón izquierdo
+            leftBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                mobileControls.left = true;
+            });
+            
+            leftBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                mobileControls.left = false;
+            });
+            
+            leftBtn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                mobileControls.left = true;
+            });
+            
+            leftBtn.addEventListener('mouseup', (e) => {
+                e.preventDefault();
+                mobileControls.left = false;
+            });
+            
+            // Botón derecho
+            rightBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                mobileControls.right = true;
+            });
+            
+            rightBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                mobileControls.right = false;
+            });
+            
+            rightBtn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                mobileControls.right = true;
+            });
+            
+            rightBtn.addEventListener('mouseup', (e) => {
+                e.preventDefault();
+                mobileControls.right = false;
+            });
+            
+            // Evitar scroll al tocar controles
+            leftBtn.addEventListener('touchmove', (e) => e.preventDefault());
+            rightBtn.addEventListener('touchmove', (e) => e.preventDefault());
         }
         
-        function restartGame() {
-            console.log("Reiniciando juego");
-            gameState = 'start';
-            document.getElementById('startScreen').classList.remove('hidden');
-            document.getElementById('gameOverScreen').classList.add('hidden');
-            document.getElementById('winScreen').classList.add('hidden');
-        }
-
         // Inicializar elementos del fondo
         function initBackground() {
-            // Líneas de carretera
+            roadLines = [];
+            buildings = [];
+            clouds = [];
+            
             for (let i = 0; i < 15; i++) {
                 roadLines.push({
                     x: canvas.width / 2 - 100,
@@ -187,7 +326,6 @@
                 });
             }
             
-            // Edificios a los costados
             for (let i = 0; i < 20; i++) {
                 buildings.push({
                     x: Math.random() * 200,
@@ -208,7 +346,6 @@
                 });
             }
             
-            // Nubes
             for (let i = 0; i < 12; i++) {
                 clouds.push({
                     x: Math.random() * canvas.width,
@@ -217,7 +354,7 @@
                 });
             }
         }
-
+        
         // Dibujar el fondo
         function drawBackground() {
             let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -242,7 +379,6 @@
                 ctx.fillStyle = building.color;
                 ctx.fillRect(building.x, building.y, building.width, building.height);
                 
-                // Ventanas
                 ctx.fillStyle = 'yellow';
                 for (let i = 0; i < 3; i++) {
                     for (let j = 0; j < 2; j++) {
@@ -253,7 +389,7 @@
                 }
             });
             
-            // Carretera central con perspectiva
+            // Carretera
             ctx.fillStyle = '#404040';
             ctx.beginPath();
             ctx.moveTo(canvas.width / 2 - 200, canvas.height);
@@ -263,9 +399,8 @@
             ctx.closePath();
             ctx.fill();
             
-            // Veredas a los costados
+            // Veredas
             ctx.fillStyle = '#D3D3D3';
-            // Vereda izquierda
             ctx.beginPath();
             ctx.moveTo(canvas.width / 2 - 220, canvas.height);
             ctx.lineTo(canvas.width / 2 - 120, 0);
@@ -274,7 +409,6 @@
             ctx.closePath();
             ctx.fill();
             
-            // Vereda derecha
             ctx.beginPath();
             ctx.moveTo(canvas.width / 2 + 200, canvas.height);
             ctx.lineTo(canvas.width / 2 + 100, 0);
@@ -283,29 +417,27 @@
             ctx.closePath();
             ctx.fill();
             
-            // Líneas centrales de la carretera
+            // Líneas de carretera
             ctx.fillStyle = 'white';
             roadLines.forEach(line => {
                 ctx.fillRect(line.x, line.y, line.width, 4);
             });
         }
-
-        // Dibujar al protagonista (Luis Espert en moto)
+        
+        // Dibujar al protagonista
         function drawPlayer() {
-            // Moto - carrocería principal vista desde atrás
+            // Moto
             ctx.fillStyle = '#1e40af';
             ctx.fillRect(player.x - 20, player.y + 25, 40, 35);
             
-            // Asiento de la moto
             ctx.fillStyle = '#000';
             ctx.fillRect(player.x - 17, player.y + 15, 34, 15);
             
-            // Ruedas traseras
+            // Ruedas
             ctx.fillStyle = '#2C2C2C';
             ctx.fillRect(player.x - 25, player.y + 50, 12, 20);
             ctx.fillRect(player.x + 13, player.y + 50, 12, 20);
             
-            // Llantas
             ctx.fillStyle = '#C0C0C0';
             ctx.fillRect(player.x - 23, player.y + 52, 8, 16);
             ctx.fillRect(player.x + 15, player.y + 52, 8, 16);
@@ -314,43 +446,38 @@
             ctx.fillStyle = '#8B4513';
             ctx.fillRect(player.x - 6, player.y - 5, 12, 25);
             
-            // Cabeza del conductor
             ctx.fillStyle = '#FFE4C4';
             ctx.beginPath();
             ctx.arc(player.x, player.y - 10, 6, 0, Math.PI * 2);
             ctx.fill();
             
-            // Casco del conductor
             ctx.fillStyle = '#FF0000';
             ctx.beginPath();
             ctx.arc(player.x, player.y - 12, 8, Math.PI, Math.PI * 2);
             ctx.fill();
             
-            // Luis Espert (pasajero trasero)
+            // Luis Espert
             ctx.fillStyle = '#2C3E50';
             ctx.fillRect(player.x - 8, player.y + 10, 16, 25);
             
-            // Cabeza pelada vista desde atrás
             ctx.fillStyle = '#FFE4C4';
             ctx.beginPath();
             ctx.arc(player.x, player.y + 5, 10, 0, Math.PI * 2);
             ctx.fill();
             
-            // Reflejo en la cabeza pelada
+            // Reflejo en la cabeza
             ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
             ctx.beginPath();
             ctx.arc(player.x - 2, player.y + 2, 4, 0, Math.PI * 2);
             ctx.fill();
             
-            // Cuello de camisa
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(player.x - 4, player.y + 15, 8, 4);
             
-            // Corbata
             ctx.fillStyle = '#e74c3c';
             ctx.fillRect(player.x - 2, player.y + 19, 4, 12);
             
-            // Brazos agarrando al conductor
+            // Brazos
             ctx.fillStyle = '#2C3E50';
             ctx.fillRect(player.x - 12, player.y + 12, 8, 6);
             ctx.fillRect(player.x + 4, player.y + 12, 8, 6);
@@ -366,7 +493,7 @@
             ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             ctx.fillRect(player.x - 23, player.y + 72, 46, 8);
         }
-
+        
         // Crear vegetales
         function createVegetable() {
             if (Math.random() < 0.02 + (90 - timeLeft) * 0.001) {
@@ -382,7 +509,7 @@
                 });
             }
         }
-
+        
         // Dibujar vegetales
         function drawVegetables() {
             vegetables.forEach(veg => {
@@ -394,7 +521,7 @@
                 ctx.restore();
             });
         }
-
+        
         // Actualizar vegetales
         function updateVegetables() {
             vegetables.forEach((veg, index) => {
@@ -408,7 +535,7 @@
                 }
             });
         }
-
+        
         // Detectar colisiones
         function checkCollisions() {
             vegetables.forEach((veg, index) => {
@@ -420,14 +547,17 @@
                     vegetables.splice(index, 1);
                     lives--;
                     
+                    player.y += Math.random() * 10 - 5;
+                    playSound(200, 0.3);
+                    
                     if (lives <= 0) {
                         gameState = 'gameOver';
                     }
                 }
             });
         }
-
-        // Actualizar fondo
+        
+        // Actualizar elementos del fondo
         function updateBackground() {
             roadLines.forEach(line => {
                 line.y += gameSpeed;
@@ -451,12 +581,15 @@
                 }
             });
         }
-
-        // Actualizar jugador
+        
+        // Actualizar jugador (compatible con móvil)
         function updatePlayer() {
-            if (keys['ArrowLeft'] && player.x > canvas.width / 2 - 180) {
+            const isMovingLeft = keys['ArrowLeft'] || mobileControls.left;
+            const isMovingRight = keys['ArrowRight'] || mobileControls.right;
+            
+            if (isMovingLeft && player.x > canvas.width / 2 - 180) {
                 player.dx = -4;
-            } else if (keys['ArrowRight'] && player.x < canvas.width / 2 + 180) {
+            } else if (isMovingRight && player.x < canvas.width / 2 + 180) {
                 player.dx = 4;
             } else {
                 player.dx *= 0.8;
@@ -467,7 +600,7 @@
             if (player.x < canvas.width / 2 - 180) player.x = canvas.width / 2 - 180;
             if (player.x > canvas.width / 2 + 180) player.x = canvas.width / 2 + 180;
         }
-
+        
         // Dibujar vecinos
         function drawNeighbors() {
             for (let i = 0; i < 3; i++) {
@@ -514,7 +647,7 @@
                 }
             }
         }
-
+        
         // Loop principal del juego
         function gameLoop() {
             if (gameState === 'playing') {
@@ -539,28 +672,51 @@
                 
                 if (timeLeft <= 0) {
                     gameState = 'win';
+                    playSound(800, 1.0);
                 }
             }
             
             requestAnimationFrame(gameLoop);
         }
-
+        
         // Timer del juego
         setInterval(() => {
             if (gameState === 'playing' && timeLeft > 0) {
                 timeLeft--;
             }
         }, 1000);
-
-        // Controles
+        
+        // Controles de teclado
         document.addEventListener('keydown', (e) => {
             keys[e.code] = true;
         });
-
+        
         document.addEventListener('keyup', (e) => {
             keys[e.code] = false;
         });
-
+        
+        // Funciones de control del juego
+        function startGame() {
+            gameState = 'playing';
+            timeLeft = 90;
+            lives = 3;
+            score = 0;
+            vegetables = [];
+            player.x = canvas.width / 2;
+            gameSpeed = 2;
+            
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('winScreen').classList.add('hidden');
+        }
+        
+        function restartGame() {
+            gameState = 'start';
+            document.getElementById('startScreen').classList.remove('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('winScreen').classList.add('hidden');
+        }
+        
         // Observar cambios de estado
         setInterval(() => {
             if (gameState === 'gameOver') {
@@ -572,20 +728,64 @@
                 
                 const helicopter = document.getElementById('helicopter');
                 let helicopterY = 100;
-                setInterval(() => {
+                const helicopterInterval = setInterval(() => {
                     helicopterY += Math.sin(Date.now() * 0.005) * 2;
                     helicopter.style.top = helicopterY + 'px';
                     helicopter.style.left = (Math.sin(Date.now() * 0.003) * 20 + 350) + 'px';
+                    
+                    if (gameState !== 'win') {
+                        clearInterval(helicopterInterval);
+                    }
                 }, 50);
             }
         }, 100);
-
+        
+        // Sonidos
+        function playSound(frequency, duration) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'square';
+                
+                gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + duration);
+            } catch (e) {
+                console.log('Error reproduciendo sonido');
+            }
+        }
+        
         // Inicializar juego
         initBackground();
+        setupMobileControls();
         gameLoop();
-
-        // Confirmar que las funciones están definidas
-        console.log("Funciones definidas:", typeof startGame, typeof restartGame);
+        
+        // Prevenir zoom en móviles
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        });
+        
+        // Prevenir scroll del documento
+        document.addEventListener('touchmove', (e) => {
+            if (e.target.closest('#gameContainer')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // Orientación de pantalla
+        window.addEventListener('orientationchange', () => {
+            setTimeout(resizeCanvas, 100);
+        });
     </script>
 </body>
 </html>
